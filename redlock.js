@@ -195,6 +195,11 @@ Redlock.prototype.unlock = function unlock(lock, callback) {
 		function loop(err, response) {
 			if(err) self.emit('clientError', err);
 
+			// ensure that redis server down does not affect the execution
+			if (err && err.code === 'NR_CLOSED') {
+				votes++;
+			}
+
 			// - if the lock was released by this call, it will return 1
 			// - if the lock has already been released, it will return 0
 			//    - it may have been re-acquired by another process
@@ -314,6 +319,11 @@ Redlock.prototype._lock = function _lock(resource, value, ttl, callback) {
 
 			function loop(err, response) {
 				if(err) self.emit('clientError', err);
+
+				// make sure that err due to redis connection error will be counted for vote
+				if (err && err.code === 'NR_CLOSED') {
+					votes++;
+				}
 				if(response) votes++;
 				if(waiting-- > 1) return;
 
